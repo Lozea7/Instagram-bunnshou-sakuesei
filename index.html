@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インスタグラム投稿アシスタント</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm & Bright Pastels -->
+    <!-- Application Structure Plan: このSPAは、ユーザーがインスタグラム投稿文を簡単に作成できるよう、AI生成ツールを主要機能として設計されています。高齢者の利用者層を考慮し、メイン画面に直感的なAIアシスタントを配置。利用者はイベント情報を入力するだけで、AIが改行や文字数を意識した丁寧な投稿文を生成します。また、「インスタ投稿のコツ」は一つのまとまった情報として、メインナビゲーションの別のタブからアクセスできるようにしました。この構造は、コア機能のアクセシビリティを最大化しつつ、詳細なガイダンスも提供することで、デジタルに不慣れな方でも安心して利用できることを目指しています。 -->
+    <!-- Visualization & Content Choices: 
+        - メイン機能: AI投稿文生成 -> ゴール: 投稿文の簡易生成とルール遵守 -> Viz/手法: 質問形式の入力フィールド、生成ボタン、出力用テキストエリア -> インタラクション: イベント情報を入力しボタンクリックでAIが投稿文とハッシュタグを生成、生成された投稿文のコピー機能 -> 正当化: 複雑な文章作成をAIに任せることで、ユーザーの負担を大幅に軽減し、インスタグラムの投稿ハードルを下げるため。特に、27文字/33行ルールや丁寧語の適用、ハッシュタグの選定はAIに任せ、ユーザーは内容に集中できる。質問形式にすることで、入力すべき情報が明確になり、より直感的に操作できる。
+        - インスタ投稿のコツ特集 -> ゴール: 参考情報の提供と整理 -> Viz/手法: 一つのまとまったコンテンツブロックとしてテキストと例を提示 -> インタラクション: なし（タブクリックでコンテンツ全体を表示） -> 正当化: 複数の小さな項目を一つの大きな「特集」としてまとめることで、情報を見つけやすく、一度に全体を把握しやすくするため。高齢者の方にとって、細かいタブを何度も切り替える手間を省き、直感的に情報を得られるように配慮。
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; font-size: 1.125rem; /* Base font size larger */ background-color: #fefefe; /* Brighter background */ }
+        h1, h2, h3 { font-family: 'Noto Sans JP', sans-serif; }
+        .tab-button {
+            padding: 1.25rem 2rem; /* Even larger padding */
+            font-size: 1.125rem; /* Larger font size for buttons */
+            font-weight: 700;
+            border-radius: 1rem; /* More rounded */
+            background-color: #e6efff; /* Lighter blue for inactive */
+            color: #3b82f6; /* Brighter blue text */
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.1), 0 3px 6px -2px rgba(0, 0, 0, 0.08); /* Stronger shadow */
+            flex: 1 1 auto; /* Allow buttons to grow and shrink */
+            min-width: 150px; /* Minimum width for buttons */
+            text-align: center;
+        }
+        .tab-button.active {
+            background-color: #3b82f6; /* Active background color - brighter blue */
+            color: white;
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.2), 0 5px 10px -3px rgba(0, 0, 0, 0.1); /* Stronger shadow for active */
+        }
+        .tab-button:hover:not(.active) {
+            background-color: #60a5fa; /* Lighter blue on hover */
+            color: white;
+        }
+        textarea, input[type="text"] {
+            font-size: 1.125rem; /* Larger font for input fields */
+            padding: 1rem; /* Larger padding for inputs */
+            border-width: 2px; /* Thicker border */
+        }
+        .action-button {
+            padding: 1.25rem 2.5rem; /* Even larger action buttons */
+            font-size: 1.5rem; /* Larger font for action buttons */
+            font-weight: 700;
+            border-radius: 1rem; /* More rounded */
+            box-shadow: 0 6px 10px -2px rgba(0, 0, 0, 0.1), 0 3px 6px -2px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease-in-out;
+        }
+        .action-button:hover {
+            transform: translateY(-2px); /* Slight lift on hover */
+            box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 8px -2px rgba(0, 0, 0, 0.1);
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2.5rem; /* Larger padding */
+            border-radius: 1rem; /* More rounded */
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3); /* Stronger shadow */
+            z-index: 1000;
+            text-align: center;
+            font-size: 1.4rem; /* Larger font */
+            max-width: 90%;
+            border: 3px solid #3b82f6; /* Blue border */
+        }
+        .message-box button {
+            margin-top: 1.5rem; /* More margin */
+            padding: 1rem 2rem; /* Larger button */
+            font-size: 1.2rem;
+            background-color: #3b82f6; /* Blue button */
+            color: white;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease-in-out;
+        }
+        .message-box button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-6xl font-bold text-slate-900 leading-tight">インスタグラム投稿アシスタント</h1>
+            <p class="mt-6 text-xl md:text-2xl text-slate-600 leading-relaxed">AIが地域のイベント投稿文を簡単に作成します！</p>
+        </header>
+
+        <main class="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10 border-4 border-indigo-100">
+            <nav class="mb-10 pb-8 border-b-2 border-indigo-200">
+                <p class="mb-8 text-lg text-slate-700 font-medium leading-relaxed text-center">
+                    投稿文を作成したい場合は<strong class="text-indigo-700">「AIで作成」</strong>ボタンを、<br>
+                    投稿のコツを知りたい場合は<strong class="text-indigo-700">「投稿のコツ特集」</strong>ボタンをクリックしてください。
+                </p>
+                <div id="tab-buttons" class="flex flex-wrap gap-6 justify-center max-w-2xl mx-auto">
+                    <button class="tab-button active" data-tab="ai-generator">
+                        <span class="mr-2">🤖</span> AIで作成
+                    </button>
+                    <button class="tab-button" data-tab="instagram-tips">
+                        <span class="mr-2">💡</span> 投稿のコツ特集
+                    </button>
+                </div>
+            </nav>
+
+            <div id="tab-content">
+            </div>
+        </main>
+
+        <footer class="text-center mt-16">
+            <p class="text-base text-slate-500">このツールが、皆様の地域活動の一助となれば幸いです。</p>
+        </footer>
+    </div>
+
+    <div id="message-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div id="message-box" class="message-box">
+            <p id="message-text"></p>
+            <button id="message-ok-button">OK</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabButtonsContainer = document.getElementById('tab-buttons');
+            const tabContentContainer = document.getElementById('tab-content');
+            const messageOverlay = document.getElementById('message-overlay');
+            const messageText = document.getElementById('message-text');
+            const messageOkButton = document.getElementById('message-ok-button');
+
+            // メッセージボックスを表示する関数
+            function showMessageBox(message) {
+                messageText.textContent = message;
+                messageOverlay.classList.remove('hidden');
+            }
+
+            // メッセージボックスのOKボタンクリック時の処理
+            messageOkButton.onclick = () => {
+                messageOverlay.classList.add('hidden');
+            };
+
+            // 各タブのコンテンツを定義
+            const tabContents = {
+                'ai-generator': `
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-slate-800 text-center">AIでインスタ投稿文を作成</h3>
+                    <p class="text-base md:text-lg text-slate-700 mb-8 text-center leading-relaxed">
+                        以下の簡単な質問に答えるだけで、AIがインスタグラムにぴったりの投稿文を考えてくれます。<br>
+                        わかる範囲で入力してください。
+                    </p>
+                    <div class="bg-indigo-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8">
+                        <div class="mb-6">
+                            <label for="event-where" class="block text-xl font-semibold text-indigo-800 mb-3">① どこでイベントがありましたか？</label>
+                            <textarea id="event-where" class="w-full p-4 border-2 border-indigo-300 rounded-lg focus:ring-4 focus:ring-indigo-400 focus:outline-none h-28 resize-y" placeholder="例：〇〇広場、〇〇町公民館"></textarea>
+                        </div>
+                        <div class="mb-6">
+                            <label for="event-when" class="block text-xl font-semibold text-indigo-800 mb-3">② いつイベントがありましたか？</label>
+                            <textarea id="event-when" class="w-full p-4 border-2 border-indigo-300 rounded-lg focus:ring-4 focus:ring-indigo-400 focus:outline-none h-28 resize-y" placeholder="例：〇月〇日午前10時から午後3時まで、先日開催されました"></textarea>
+                        </div>
+                        <div class="mb-6">
+                            <label for="event-what-happened" class="block text-xl font-semibold text-indigo-800 mb-3">③ イベントで何がありましたか？（内容）</label>
+                            <textarea id="event-what-happened" class="w-full p-4 border-2 border-indigo-300 rounded-lg focus:ring-4 focus:ring-indigo-400 focus:outline-none h-36 resize-y" placeholder="例：地元野菜の販売、餅つき大会、子ども向けのゲームコーナー"></textarea>
+                        </div>
+                        <div class="mb-6">
+                            <label for="event-what-was-done" class="block text-xl font-semibold text-indigo-800 mb-3">④ 参加者はどんなことをしましたか？（行動）</label>
+                            <textarea id="event-what-was-done" class="w-full p-4 border-2 border-indigo-300 rounded-lg focus:ring-4 focus:ring-indigo-400 focus:outline-none h-28 resize-y" placeholder="例：美味しい野菜をたくさん買いました、餅つきを楽しみました、笑顔で交流しました"></textarea>
+                        </div>
+                        <div class="mb-8">
+                            <label for="event-results" class="block text-xl font-semibold text-indigo-800 mb-3">⑤ イベントからどんな良いことがありましたか？（成果）</label>
+                            <textarea id="event-results" class="w-full p-4 border-2 border-indigo-300 rounded-lg focus:ring-4 focus:ring-indigo-400 focus:outline-none h-28 resize-y" placeholder="例：多くの来場者で賑わいました、地域が一体となりました、笑顔があふれていました"></textarea>
+                        </div>
+                        <button id="generate-button" class="action-button w-full bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">投稿文を生成する</button>
+                        <div id="loading-indicator" class="hidden mt-6 text-indigo-700 font-bold text-center text-xl">生成中...少々お待ちください。</div>
+                    </div>
+                    <div class="bg-emerald-50 p-6 md:p-8 rounded-2xl shadow-inner border-2 border-emerald-300">
+                        <label for="output-text" class="block text-xl font-semibold text-emerald-800 mb-3">生成された投稿文</label>
+                        <textarea id="output-text" class="w-full h-64 p-4 border-2 border-emerald-300 rounded-lg bg-emerald-100 text-slate-800 focus:outline-none resize-y" readonly placeholder="ここにAIが生成した投稿文が表示されます。"></textarea>
+                        <button id="copy-button" class="action-button w-full bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 mt-6">投稿文をコピーする</button>
+                    </div>
+                `,
+                'instagram-tips': `
+                    <h3 class="text-2xl md:text-3xl font-bold mb-8 text-slate-800 text-center">インスタ投稿のコツ特集</h3>
+                    <p class="text-base md:text-lg text-slate-700 mb-8 text-center leading-relaxed">
+                        より魅力的なインスタグラム投稿を作成するための、大切なポイントをまとめました。<br>
+                        AIが作った投稿文に、これらのコツをプラスすると、もっと素敵な投稿になります。
+                    </p>
+
+                    <div class="bg-yellow-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-yellow-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-yellow-800">1. 適切な改行を心がけましょう ↔️</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            スマートフォンで投稿を開くと、文章が横に<strong>27文字</strong>を超えますと、途中で不自然に途切れて表示される場合がございます。
+                            可読性の低下を招き、メッセージが正確に伝わらなくなる恐れがございますため、こまめな改行を推奨いたします。
+                        </p>
+                        <p class="font-semibold text-yellow-700 text-lg mb-2">（例）</p>
+                        <div class="bg-white p-4 rounded-lg border border-yellow-100">
+                            <p class="mt-1 text-base text-slate-600 leading-relaxed">
+                                <strong>不適切な例：</strong>「この写真は先日訪問いたしましたカフェで撮影したもので、大変雰囲気が良く、私のお気に入りの場所となりました。」
+                            </p>
+                            <p class="mt-4 text-base text-slate-600 leading-relaxed">
+                                <strong>適切な例：</strong>「こちらの写真は、<br>先日訪問いたしました<br>カフェで撮影しました。<br>大変雰囲気が良く、<br>お気に入りの場所と<br>なっております。」
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-blue-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-blue-800">2. 1画面に収まる文章量を意識しましょう 📄</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            スマートフォンの1画面には、およそ<strong>33行</strong>程度の文章が一度に表示される傾向にございます。
+                            文章が長すぎますと、閲覧者がスクロールする手間が増え、内容が最後まで読まれない可能性もございます。
+                            お伝えしたいことは、簡潔にまとめ、最初の画面で関心を引きつける工夫をなさってください。
+                        </p>
+                        <p class="font-semibold text-blue-700 text-lg mb-2">（例）</p>
+                        <div class="bg-white p-4 rounded-lg border border-blue-100">
+                            <p class="mt-1 text-base text-slate-600 leading-relaxed">
+                                <strong>不適切な例（一部）：</strong>「インスタグラムの投稿は、視覚的な要素が非常に重要であると同時に、キャプションを通じてユーザーにメッセージを伝えることも不可欠です。しかし、長文になりすぎるとスマートフォンでの閲覧性が低下し、読者の途中で離脱してしまうリスクがあります。特に、最初の画面で表示される行数には限りがあり、その範囲内で魅力的な導入文を作成することが求められます。情報量を多く盛り込みたい場合は、スライド形式の投稿や、ウェブサイトへの誘導など、別の方法を検討することも重要です。これにより、ユーザーはスムーズに情報を得ることができ、投稿のエンゲージメント向上に繋がるでしょう。」
+                            </p>
+                            <p class="mt-4 text-base text-slate-600 leading-relaxed">
+                                <strong>適切な例（一部）：</strong>「インスタ投稿は、<br>視覚情報が大切です。<br>同時に、キャプションで<br>メッセージを伝えることも<br>不可欠でございます。<br><br>ただし、長文になりすぎると<br>スマートフォンでの閲覧性が<br>低下する恐れがございます。<br>特に、最初の画面に表示される<br>行数には限りがございます。<br>約33行が目安です。<br><br>その範囲内で、<br>魅力的な導入文を<br>作成することが<br>求められます。」
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-green-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-green-800">3. 丁寧な言葉遣いを意識しましょう 🗣️</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            インスタグラムでは親しみやすい表現も有効ですが、企業の公式アカウントや目上の方とのコミュニケーションでは、丁寧な言葉遣いが信頼に繋がります。
+                            <strong>「〜です」「〜ます」「〜でございます」</strong>などを基本とし、投稿内容やターゲットに応じて適切なトーンを判断することが重要です。
+                        </p>
+                        <p class="font-semibold text-green-700 text-lg mb-2">（例）</p>
+                        <div class="bg-white p-4 rounded-lg border border-green-100">
+                            <p class="mt-1 text-base text-slate-600 leading-relaxed">
+                                <strong>親しみやすい表現：</strong>「このカフェ、最高だったよ！みんなも行ってみてね！」
+                            </p>
+                            <p class="mt-1 text-base text-slate-600 leading-relaxed">
+                                <strong>丁寧な表現：</strong>「こちらのカフェは、素晴らしい雰囲気でした。皆様もぜひ一度足をお運びください。」
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-purple-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-purple-800">4. ハッシュタグを有効活用しましょう #️⃣</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            ハッシュタグは、投稿をまだ知らない潜在的なフォロワーに届けるための重要な機能です。
+                            関連性の高いものを<strong>10個以上</strong>設定することが効果的とされています。
+                            人気のタグと専門的なタグを組み合わせることで、より広い層にアプローチできます。
+                        </p>
+                        <p class="font-semibold text-purple-700 text-lg mb-2">ハッシュタグの例：</p>
+                        <div class="flex flex-wrap gap-3 mt-2 bg-white p-4 rounded-lg border border-purple-100">
+                            <span class="bg-purple-100 text-purple-800 text-base font-semibold px-4 py-1.5 rounded-full">#〇〇カフェ</span>
+                            <span class="bg-purple-100 text-purple-800 text-base font-semibold px-4 py-1.5 rounded-full">#〇〇グルメ</span>
+                            <span class="bg-purple-100 text-purple-800 text-base font-semibold px-4 py-1.5 rounded-full">#東京カフェ巡り</span>
+                            <span class="bg-purple-100 text-purple-800 text-base font-semibold px-4 py-1.5 rounded-full">#カフェスタグラム</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-pink-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-pink-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-pink-800">5. 高画質な写真・動画を選びましょう 🖼️</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            インスタグラムは視覚的な情報が中心のプラットフォームです。
+                            ブレていたり、暗すぎる写真は投稿の魅力を損ねてしまいます。
+                            自然光を活用する、ピントをしっかり合わせる、簡単な画像編集アプリで明るさや色合いを調整するなど、
+                            少しの工夫で見栄えは格段に向上します。
+                        </p>
+                    </div>
+
+                    <div class="bg-cyan-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-cyan-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-cyan-800">6. キャプションに想いを込めましょう ✍️</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            キャプションは、写真や動画だけでは伝わらないストーリーや背景、感情を伝えるための重要な要素です。
+                            何を伝えたいのか、どのような意図で撮影したのかを文章にすることで、投稿に深みが増し、
+                            フォロワーとの繋がりが強まります。
+                        </p>
+                    </div>
+
+                    <div class="bg-orange-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-orange-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-orange-800">7. 投稿時間を検討してみましょう ⏰</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            多くの方がインスタグラムを閲覧している時間に投稿することで、より多くの目に触れる機会が増加します。
+                            一般的に、閲覧されやすい時間帯は以下の通りです。
+                        </p>
+                        <p class="font-semibold text-orange-700 text-lg mb-2">閲覧されやすい時間帯の例：</p>
+                        <div class="bg-white p-4 rounded-lg border border-orange-100">
+                            <ul class="list-disc list-inside text-base text-slate-600">
+                                <li><strong>昼休憩：</strong>12時〜13時頃</li>
+                                <li><strong>業務終了後：</strong>18時〜21時頃</li>
+                                <li>通勤・通学時間帯も有効な場合があります。</li>
+                            </ul>
+                            <p class="mt-3 text-base text-slate-600 leading-relaxed">
+                                アカウントのフォロワー層によって最適な時間は異なりますので、インサイト機能での確認も推奨いたします。
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-teal-50 p-6 md:p-8 rounded-2xl shadow-inner mb-8 border-2 border-teal-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-teal-800">8. コメントやDMには返信しましょう 💬</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            フォロワーからのコメントやDMは、貴重なコミュニケーションの機会です。
+                            丁寧に返信することで、関係性を深め、熱心なファンを育むことに繋がります。
+                            一つ一つのやり取りを大切にすることが、アカウントの成長の鍵となります。
+                        </p>
+                    </div>
+
+                    <div class="bg-rose-50 p-6 md:p-8 rounded-2xl shadow-inner border-2 border-rose-200">
+                        <h4 class="text-xl md:text-2xl font-bold mb-4 text-rose-800">9. インサイトを活用して分析しましょう 📊</h4>
+                        <p class="text-base text-slate-700 mb-4 leading-relaxed">
+                            ビジネスアカウント（無料）に切り替えると、「インサイト」機能が利用できます。
+                            どの投稿が人気だったか、フォロワーの年齢層や性別、地域などのデータを把握できます。
+                            これらのデータを分析し、次の投稿計画に活かすことで、より効果的なアカウント運用が可能になります。
+                        </p>
+                    </div>
+                `
+            };
+
+            // 各タブコンテンツをDOMに追加
+            for (const id in tabContents) {
+                const contentDiv = document.createElement('div');
+                contentDiv.id = id;
+                contentDiv.className = 'tab-panel hidden';
+                contentDiv.innerHTML = tabContents[id];
+                tabContentContainer.appendChild(contentDiv);
+            }
+
+            // タブをアクティブにする関数
+            function activateTab(tabId) {
+                // 全てのタブボタンから 'active' クラスを削除し、指定されたタブに 'active' クラスを追加
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.classList.toggle('active', button.dataset.tab === tabId);
+                });
+                // 全てのタブパネルを非表示にし、指定されたタブパネルのみを表示
+                document.querySelectorAll('.tab-panel').forEach(panel => {
+                    panel.classList.toggle('hidden', panel.id !== tabId);
+                });
+
+                // AIジェネレータータブが選択された場合、セットアップ関数を呼び出す
+                if (tabId === 'ai-generator') {
+                    setupAIGenerator();
+                }
+            }
+
+            // AIジェネレーター機能のセットアップ
+            function setupAIGenerator() {
+                const generateButton = document.getElementById('generate-button');
+                const copyButton = document.getElementById('copy-button');
+                const eventWhere = document.getElementById('event-where');
+                const eventWhen = document.getElementById('event-when');
+                const eventWhatHappened = document.getElementById('event-what-happened');
+                const eventWhatWasDone = document.getElementById('event-what-was-done');
+                const eventResults = document.getElementById('event-results');
+                const outputText = document.getElementById('output-text');
+                const loadingIndicator = document.getElementById('loading-indicator');
+
+                // 生成ボタンのクリックイベントリスナー
+                if (generateButton) {
+                    generateButton.onclick = async () => {
+                        const where = eventWhere.value.trim();
+                        const when = eventWhen.value.trim();
+                        const whatHappened = eventWhatHappened.value.trim();
+                        const whatWasDone = eventWhatWasDone.value.trim();
+                        const results = eventResults.value.trim();
+
+                        // 全ての入力が空の場合、警告メッセージを表示
+                        if (!where && !when && !whatHappened && !whatWasDone && !results) {
+                            showMessageBox('イベントの詳細を何か入力してください。');
+                            return;
+                        }
+
+                        // ローディング表示と出力エリアのクリア
+                        loadingIndicator.classList.remove('hidden');
+                        outputText.value = '';
+
+                        try {
+                            // AIへのプロンプト（指示文）を構築
+                            const prompt = `以下の情報を基に、インスタグラムの投稿文を生成してください。ターゲットは中山間地域の高齢者の方々で、親しみやすい丁寧語（です・ます調）を使用し、各行27文字以内、全体で33行程度に収まるように改行を多用してください。**最後に、投稿内容に関連するハッシュタグを5〜10個提案してください。**
+
+イベントの詳細:
+${where ? `・場所: ${where}\n` : ''}
+${when ? `・日時: ${when}\n` : ''}
+${whatHappened ? `・内容: ${whatHappened}\n` : ''}
+${whatWasDone ? `・参加者の様子: ${whatWasDone}\n` : ''}
+${results ? `・成果・感想: ${results}\n` : ''}
+`;
+
+                            let chatHistory = [];
+                            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                            const payload = { contents: chatHistory };
+                            const apiKey = ""; // APIキーはCanvasによって自動的に提供されます
+                            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                            
+                            // Gemini APIへのフェッチリクエスト
+                            const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const result = await response.json();
+                            // APIからの応答を処理
+                            if (result.candidates && result.candidates.length > 0 &&
+                                result.candidates[0].content && result.candidates[0].content.parts &&
+                                result.candidates[0].content.parts.length > 0) {
+                                const text = result.candidates[0].content.parts[0].text;
+                                outputText.value = text;
+                            } else {
+                                outputText.value = '投稿文の生成に失敗しました。もう一度お試しください。';
+                            }
+                        } catch (error) {
+                            // API呼び出し中のエラーをコンソールに表示し、メッセージボックスでユーザーに通知
+                            console.error('API呼び出し中にエラーが発生しました:', error);
+                            showMessageBox('エラーが発生しました。インターネット接続を確認し、もう一度お試しください。');
+                        } finally {
+                            // ローディング表示を非表示にする
+                            loadingIndicator.classList.add('hidden');
+                        }
+                    };
+                }
+
+                // コピーボタンのクリックイベントリスナー
+                if (copyButton) {
+                    copyButton.onclick = () => {
+                        outputText.select(); // テキストエリアのテキストを全選択
+                        document.execCommand('copy'); // 選択したテキストをクリップボードにコピー
+                        showMessageBox('投稿文をコピーしました！'); // コピー完了メッセージを表示
+                    };
+                }
+            }
+
+            // タブボタンのクリックイベントリスナー
+            tabButtonsContainer.addEventListener('click', (e) => {
+                // クリックされた要素がタブボタン、またはその子孫であるかを確認
+                if (e.target.closest('.tab-button')) {
+                    // データ属性からタブIDを取得し、アクティブタブを切り替える
+                    activateTab(e.target.closest('.tab-button').dataset.tab);
+                }
+            });
+
+            // 初期表示としてAIジェネレータータブをアクティブにする
+            activateTab('ai-generator');
+        });
+    </script>
+</body>
+</html>
